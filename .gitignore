@@ -1,3 +1,30 @@
+# Добавлено для Python
+backend/__pycache__/
+backend/*.pyc
+backend/.env*
+backend/*.sqlite3
+
+# Добавлено для всей среды
+*.log
+*.pid
+*.sqlite3
+*.db
+*.sqlite
+
+# Добавлено для IDE (PyCharm/VSCode)
+.idea/
+.vscode/
+*.iml
+
+# Добавлено для Node.js (дублирует/расширяет существующее)
+frontend/node_modules/
+frontend/.env*
+
+# Специфичная папка данных docker и coverage
+**/migrations/__pycache__/
+**/migrations/*.pyc
+
+# остальной существующий .gitignore
 # Node
 node_modules/
 # Python
