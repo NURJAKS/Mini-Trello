@@ -1,0 +1,260 @@
+version: '3.9'
+services:
+  # User Service
+  user_db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: user_service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  user_redis:
+    image: redis:7-alpine
+    volumes:
+      - user_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  user_service:
+    build: ./backend/user_service
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@user_db:5432/user_service
+      REDIS_URL: redis://user_redis:6379/0
+      JWT_SECRET: change_this_secret
+    depends_on:
+      user_db:
+        condition: service_healthy
+      user_redis:
+        condition: service_healthy
+    ports:
+      - "5001:5001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Board Service
+  board_db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: board_service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - board_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  board_service:
+    build: ./backend/board_service
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@board_db:5432/board_service
+    depends_on:
+      board_db:
+        condition: service_healthy
+    ports:
+      - "5002:5002"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Card Service
+  card_db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: card_service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - card_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  card_service:
+    build: ./backend/card_service
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@card_db:5432/card_service
+    depends_on:
+      card_db:
+        condition: service_healthy
+    ports:
+      - "5003:5003"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Comment Service
+  comment_db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: comment_service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - comment_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  comment_service:
+    build: ./backend/comment_service
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@comment_db:5432/comment_service
+    depends_on:
+      comment_db:
+        condition: service_healthy
+    ports:
+      - "5004:5004"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5004/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+  comment_celery_worker:
+    build: ./backend/comment_service
+    command: celery -A celery_worker worker --loglevel=info
+    environment:
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+    depends_on:
+      - rabbitmq
+      - comment_db
+
+  # Attachment Service
+  attachment_db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: attachment_service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - attachment_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  attachment_service:
+    build: ./backend/attachment_service
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@attachment_db:5432/attachment_service
+    depends_on:
+      attachment_db:
+        condition: service_healthy
+    ports:
+      - "5005:5005"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5005/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Celery/Async Infra
+  rabbitmq:
+    image: rabbitmq:3.9-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # Kong Gateway
+  kong-database:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: kong
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: kong
+    volumes:
+      - kong_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "kong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  kong:
+    image: kong:3.6
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_PASSWORD: kong
+      KONG_PG_USER: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+      KONG_PLUGINS: bundled,jwt-keycloak-auth
+    depends_on:
+      kong-database:
+        condition: service_healthy
+    ports:
+      - "8000:8000" # Proxy
+      - "8443:8443"
+      - "8001:8001" # Admin API
+      - "8444:8444"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/status"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # Frontend (Next.js)
+  frontend:
+    build: ./frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://kong:8000
+    depends_on:
+      - kong
+    ports:
+      - "3001:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  nginx:
+    image: nginx:1.23
+    volumes:
+      - ./frontend/src/app:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+    ports:
+      - "80:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  user_db_data:
+  user_redis_data:
+  board_db_data:
+  card_db_data:
+  comment_db_data:
+  attachment_db_data:
+  kong_db_data:
+
