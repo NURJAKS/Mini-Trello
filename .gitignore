@@ -1,0 +1,42 @@
+# Node
+node_modules/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+# dotenv
+.env
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+# Docker
+*.log
+*.pid
+docker-compose.override.yml
+# Coverage
+coverage/
+# Build
+build/
+dist/
+# System
+Thumbs.db
+# Test
+.tox/
+.nox/
+# Migrations
+**/migrations/__pycache__/
+**/migrations/*.pyc
+# Frontend cache
+.next/
+out/
+# Misc
+*.pem
+*.tsbuildinfo
+next-env.d.ts
