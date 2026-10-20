@@ -2,6 +2,7 @@
 
 > **Production-patterned, distributed microservices task management platform architected with Kong API Gateway, Database-per-Service domain isolation across 5 PostgreSQL instances, Celery asynchronous workers, Redis event bus, and Docker Compose orchestration.**
 
+[![CI Pipeline](https://github.com/NURJAKS/Mini-Trello/actions/workflows/ci.yml/badge.svg)](https://github.com/NURJAKS/Mini-Trello/actions/workflows/ci.yml)
 [![Kong](https://img.shields.io/badge/Kong-Gateway_3.6-003459?logo=kong&logoColor=white)](https://konghq.com/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-Microservices-black?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
